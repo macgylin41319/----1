@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星运灵数 | 深度命盘分析</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #1a0b2e 0%, #43125a 100%);
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #d1d5db;
+            --accent-gold: #fbbf24;
+            --accent-purple: #c084fc;
+            --active-cell: rgba(251, 191, 36, 0.2);
+            --border-light: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        .app-container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            color: var(--accent-gold);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="date"] {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        button.btn-analyze {
+            padding: 12px 30px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+            color: #1a0b2e;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button.btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(251, 191, 36, 0.3);
+        }
+
+        /* 结果展示区 */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease-out;
+            visibility: hidden; /* Prevent interaction when hidden */
+        }
+
+        .dashboard.active {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 左侧信息卡 */
+        .info-card {
+            background: rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-light);
+        }
+
+        .card-header {
+            color: var(--accent-purple);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 0.5rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .big-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent-gold);
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+
+        /* 九宫格优化 */
+        .numerology-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+            aspect-ratio: 1;
+            position: relative;
+        }
+
+        .grid-cell {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: rgba(255,255,255,0.2);
+            position: relative;
+            transition: all 0.3s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .grid-cell:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .grid-cell.active {
+            background: var(--active-cell);
+            color: var(--accent-gold);
+            border-color: var(--accent-gold);
+            box-shadow: inset 0 0 15px rgba(251, 191, 36, 0.1);
+        }
+
+        .count-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--accent-purple);
+            color: white;
+            font-size: 0.75rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* 连线展示 */
+        .lines-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .line-tag {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            background: rgba(192, 132, 252, 0.2);
+            color: var(--accent-purple);
+            border-radius: 20px;
+            border: 1px solid rgba(192, 132, 252, 0.3);
+        }
+
+        /* 弹窗/解释区 */
+        .meaning-box {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(to right, rgba(251, 191, 36, 0.1), transparent);
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 0 12px 12px 0;
+            display: none;
+        }
+        .meaning-box.show { display: block; animation: fadeIn 0.5s; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h1>✨ 星运灵数分析</h1>
+    <div class="subtitle">探索您生日数字背后的宇宙密码</div>
+
+    <div class="input-section">
+        <input type="date" id="birthDate">
+        <button class="btn-analyze" onclick="analyzeNumerology()">开始解读</button>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        
+        <div class="left-panel">
+            <div class="info-card">
+                <div class="card-header">核心命盘 (Core Chart)</div>
+                <div class="stat-row">
+                    <span>主命数 (Life Path)</span>
+                    <span class="big-number" id="lifePathNum">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>天赋数 (Talents)</span>
+                    <span id="talentNums" style="color: var(--accent-purple); font-weight: bold;">-</span>
+                </div>
+                <div class="stat-row">
+                    <span>星座 (Zodiac)</span>
+                    <span id="zodiacSign">-</span>
+                </div>
+                <p id="lifePathDesc" style="font-size: 0.9rem; color: #d1d5db; margin-top:10px; line-height: 1.6;"></p>
+            </div>
+
+            <div class="info-card">
+                <div class="card-header">拥有连线 (Energy Lines)</div>
+                <div class="lines-list" id="linesList">
+                    <span class="line-tag">暂无连线</span>
+                </div>
+                <p style="font-size: 0.8rem; color: #9ca3af; margin-top: 10px;">*连线代表您拥有特别流畅的能量通道</p>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="card-header" style="text-align: center;">毕达哥拉斯九宫格 (点击数字查看含义)</div>
+            <div class="numerology-grid">
+                <div class="grid-cell" id="cell-1" onclick="showMeaning(1)">1</div>
+                <div class="grid-cell" id="cell-4" onclick="showMeaning(4)">4</div>
+                <div class="grid-cell" id="cell-7" onclick="showMeaning(7)">7</div>
+                
+                <div class="grid-cell" id="cell-2" onclick="showMeaning(2)">2</div>
+                <div class="grid-cell" id="cell-5" onclick="showMeaning(5)">5</div>
+                <div class="grid-cell" id="cell-8" onclick="showMeaning(8)">8</div>
+                
+                <div class="grid-cell" id="cell-3" onclick="showMeaning(3)">3</div>
+                <div class="grid-cell" id="cell-6" onclick="showMeaning(6)">6</div>
+                <div class="grid-cell" id="cell-9" onclick="showMeaning(9)">9</div>
+            </div>
+
+            <div id="meaningBox" class="meaning-box">
+                <h3 id="meaningTitle" style="margin: 0 0 5px 0; color: var(--accent-gold);">数字含义</h3>
+                <p id="meaningText" style="margin: 0; font-size: 0.95rem; line-height: 1.5; color: #e5e7eb;"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 数据字典 ---
+    
+    const lifePathMeanings = {
+        1: "【开创者】独立的领导者，拥有强大的创造力和意志力，但也容易自我中心。建议多倾听他人。",
+        2: "【协调者】敏感的和平使者，擅长合作与细节，富有同理心，但有时过于依赖。建议建立自信。",
+        3: "【表达者】乐观的艺术家，充满创意和沟通天赋，由于兴趣广泛容易分散精力。建议保持专注。",
+        4: "【建设者】稳定的执行者，重视秩序和安全感，脚踏实地，但有时显得固执。建议尝试变通。",
+        5: "【冒险家】自由的追求者，热爱变化和旅行，适应力强，但缺乏耐性。建议学会承担承诺。",
+        6: "【奉献者】负责的疗愈者，重视家庭和承诺，富有爱心，但容易过度操心。建议爱人先爱己。",
+        7: "【探究者】理性的分析家，追求真理和精神层次，直觉强，但倾向于孤独。建议敞开心扉。",
+        8: "【成就者】权力的掌控者，具有商业头脑和执行力，追求成功，但需注意物欲。建议平衡身心。",
+        9: "【人道者】博爱的梦想家，拥有无私的奉献精神，直觉灵敏，但有时不切实际。建议脚踏实地。"
+    };
+
+    const digitMeanings = {
+        1: "【数字 1】象征独立、自我、创造、领导力。能量强的人通常是开创者。",
+        2: "【数字 2】象征沟通、合作、平衡、敏感。能量强的人擅长配合与察言观色。",
+        3: "【数字 3】象征创意、表达、行动、艺术。能量强的人像孩子一样充满好奇。",
+        4: "【数字 4】象征稳定、秩序、安全、逻辑。能量强的人做事四平八稳。",
+        5: "【数字 5】象征自由、变化、方向、挑战。能量强的人不喜欢被束缚。",
+        6: "【数字 6】象征关怀、责任、爱心、家庭。能量强的人非常顾家且乐于助人。",
+        7: "【数字 7】象征真理、质疑、幸运、钻研。能量强的人喜欢思考深层问题。",
+        8: "【数字 8】象征权力、富足、因果、创业。能量强的人对商业和成就有敏锐度。",
+        9: "【数字 9】象征智慧、人道、服务、大爱。能量强的人通常有宗教情怀或公益心。"
+    };
+
+    const lineDefinitions = [
+        { nums: [1, 2, 3], name: "艺术线", desc: "拥有艺术才华与独立性，感性丰富" },
+        { nums: [4, 5, 6], name: "组织线", desc: "善于组织与解决问题，逻辑清晰" },
+        { nums: [7, 8, 9], name: "权力线", desc: "拥有强大的社会影响力与贵人运" },
+        { nums: [1, 4, 7], name: "物质线", desc: "务实，重视物质基础，赚钱能力强" },
+        { nums: [2, 5, 8], name: "情感线", desc: "情感丰富，善于社交，人缘极佳" },
+        { nums: [3, 6, 9], name: "智慧线", desc: "聪明灵性，思考深远，智商高" },
+        { nums: [1, 5, 9], name: "事业线", desc: "工作狂，事业心强，不达目的不罢休" },
+        { nums: [3, 5, 7], name: "人缘线", desc: "受人欢迎，容易成为群体中的焦点" }
+    ];
+
+    function analyzeNumerology() {
+        const dateInput = document.getElementById('birthDate').value;
+        if (!dateInput) return alert("请选择您的出生日期");
+
+        const date = new Date(dateInput);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+
+        // 1. 计算核心数字
+        let dateStr = "" + year + (month < 10 ? "0"+month : month) + (day < 10 ? "0"+day : day);
+        let allDigits = dateStr.split("").map(Number);
+        
+        // 天赋数
+        let talentSum = allDigits.reduce((a, b) => a + b, 0);
+        let talentNums = talentSum.toString().split("").map(Number);
+
+        // 主命数
+        let lifePath = talentSum;
+        while (lifePath > 9) {
+            lifePath = lifePath.toString().split("").map(Number).reduce((a, b) => a + b, 0);
+        }
+
+        // 2. 统计九宫格频率
+        let gridCounts = Array(10).fill(0);
+        allDigits.forEach(n => n!==0 && gridCounts[n]++);
+        talentNums.forEach(n => n!==0 && gridCounts[n]++);
+        if(lifePath !== 0) gridCounts[lifePath]++;
+
+        // 3. 计算星座
+        const zodiac = getZodiac(month, day);
+
+        // --- 渲染 UI ---
+        const dashboard = document.getElementById('dashboard');
+        dashboard.classList.remove('active');
+        
+        setTimeout(() => {
+            renderBasicInfo(lifePath, talentNums, zodiac);
+            renderGrid(gridCounts);
+            renderLines(gridCounts);
+            dashboard.classList.add('active');
+            showMeaning(lifePath, true);
+        }, 100);
+    }
+
+    function renderBasicInfo(lifePath, talentNums, zodiac) {
+        document.getElementById('lifePathNum').innerText = lifePath;
+        document.getElementById('talentNums').innerText = talentNums.join(" / ");
+        document.getElementById('zodiacSign').innerText = zodiac.name;
+        document.getElementById('lifePathDesc').innerText = lifePathMeanings[lifePath] || "暂无描述";
+    }
+
+    function renderGrid(counts) {
+        for(let i=1; i<=9; i++) {
+            const cell = document.getElementById(`cell-${i}`);
+            const count = counts[i];
+            
+            cell.className = "grid-cell";
+            cell.innerHTML = i; 
+
+            if (count > 0) {
+                cell.classList.add("active");
+                const badge = document.createElement("div");
+                badge.className = "count-badge";
+                badge.innerText = count;
+                cell.appendChild(badge);
+            }
+        }
+    }
+
+    function renderLines(counts) {
+        const container = document.getElementById('linesList');
+        container.innerHTML = "";
+        
+        let hasLine = false;
+        lineDefinitions.forEach(line => {
+            if (counts[line.nums[0]] > 0 && counts[line.nums[1]] > 0 && counts[line.nums[2]] > 0) {
+                hasLine = true;
+                const tag = document.createElement("span");
+                tag.className = "line-tag";
+                tag.innerText = `★ ${line.name}`;
+                tag.title = line.desc;
+                container.appendChild(tag);
+            }
+        });
+
+        if (!hasLine) {
+            container.innerHTML = "<span class='line-tag' style='border-style:dashed; opacity:0.7'>暂无主连线 (这也是一种特色)</span>";
+        }
+    }
+
+    function showMeaning(num, isMain = false) {
+        const box = document.getElementById('meaningBox');
+        const title = document.getElementById('meaningTitle');
+        const text = document.getElementById('meaningText');
+
+        box.classList.remove('show');
+        void box.offsetWidth; 
+        
+        title.innerText = isMain ? `主命数 ${num} 的特质` : `数字 ${num} 的能量`;
+        
+        if (isMain) {
+            text.innerText = lifePathMeanings[num];
+        } else {
+            text.innerText = digitMeanings[num] || "暂无数据";
+        }
+        
+        box.classList.add('show');
+    }
+
+    function getZodiac(m, d) {
+        const data = [
+            { name: "魔羯座", range: [1222, 119] },
+            { name: "水瓶座", range: [120, 218] },
+            { name: "双鱼座", range: [219, 320] },
+            { name: "牡羊座", range: [321, 419] },
+            { name: "金牛座", range: [420, 520] },
+            { name: "双子座", range: [521, 621] },
+            { name: "巨蟹座", range: [622, 722] },
+            { name: "狮子座", range: [723, 822] },
+            { name: "处女座", range: [823, 922] },
+            { name: "天秤座", range: [923, 1022] },
+            { name: "天蠍座", range: [1023, 1121] },
+            { name: "射手座", range: [1122, 1221] }
+        ];
+        const code = m * 100 + d;
+        if (code >= 1222 || code <= 119) return data[0];
+        for (let z of data) if (code >= z.range[0] && code <= z.range[1]) return z;
+        return { name: "未知" };
+    }
+    
+    // 初始化默认日期
+    document.getElementById('birthDate').valueAsDate = new Date();
+</script>
+
+</body>
+</html>
